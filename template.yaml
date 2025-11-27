@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  reddit-news-summarizer
+
+  Sample SAM Template for reddit-news-summarizer
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 256
+    Runtime: python3.10
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        GEMINI_API_KEY: !Ref GeminiApiKey
+        S3_BUCKET_NAME: !Ref NewsBucket
+
+
+Parameters:
+  GeminiApiKey:
+    Type: String
+    Description: API Key for Google Gemini
+    NoEcho: true
+
+
+Resources:
+  RedditNewsSummarizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: main.lambda_handler
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref NewsBucket
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 12 * * ? *)
+            Name: DailyNewsSummary
+            Description: Runs daily at 12:00 UTC
+
+  NewsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "reddit-news-summarizer-${AWS::AccountId}-${AWS::Region}"
+
+Outputs:
+  RedditNewsSummarizerFunction:
+    Description: "Reddit News Summarizer Lambda Function ARN"
+    Value: !GetAtt RedditNewsSummarizerFunction.Arn
+  NewsBucketName:
+    Description: "S3 Bucket Name"
+    Value: !Ref NewsBucket
